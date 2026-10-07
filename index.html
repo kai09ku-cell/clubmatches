@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClubMatch - 練習試合マッチング</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            background-image: radial-gradient(#e2e8f0 0.8px, transparent 0.8px);
+            background-size: 24px 24px;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        /* スポーティなアクセント効果 */
+        .sport-card {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .sport-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 24px -6px rgba(14, 165, 233, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col bg-slate-50/70">
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Header / Navbar -->
+    <header class="bg-white/90 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-30 shadow-sm">
+        <!-- Top Sport Accent Stripe -->
+        <div class="h-1 w-full bg-gradient-to-r from-blue-600 via-cyan-400 to-emerald-400"></div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <!-- Logo -->
+                <div class="flex items-center gap-3 cursor-pointer group" onclick="switchTab('explore')">
+                    <div class="bg-gradient-to-tr from-blue-600 to-cyan-500 text-white p-2.5 rounded-xl shadow-md group-hover:scale-105 transition-transform duration-200 flex items-center justify-center">
+                        <i class="fa-solid fa-bolt text-lg"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-xl font-black tracking-tight text-slate-900 group-hover:text-blue-600 transition-colors">ClubMatch</span>
+                            <span class="bg-blue-100 text-blue-700 text-[10px] font-extrabold px-1.5 py-0.5 rounded tracking-wider uppercase">Sports</span>
+                        </div>
+                        <span class="hidden sm:block text-[11px] text-slate-400 font-semibold tracking-wide">練習試合マッチングプラットフォーム</span>
+                    </div>
+                </div>
+
+                <!-- Nav Links -->
+                <nav class="hidden md:flex items-center gap-1.5 bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/60">
+                    <button id="nav-explore" onclick="switchTab('explore')" class="px-4 py-2 rounded-xl text-xs font-bold transition-all text-blue-600 bg-white shadow-sm flex items-center gap-2">
+                        <i class="fa-solid fa-magnifying-glass text-blue-500"></i>募集を探す
+                    </button>
+                    <button id="nav-mymatches" onclick="switchTab('mymatches')" class="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-600 hover:text-slate-900 flex items-center gap-2">
+                        <i class="fa-solid fa-list-check"></i>マイ募集・応募
+                    </button>
+                    <button id="nav-chat" onclick="switchTab('chat')" class="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-600 hover:text-slate-900 relative flex items-center gap-2">
+                        <i class="fa-solid fa-comments"></i>対戦チャット
+                        <span id="unread-chat-badge" class="hidden absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold border-2 border-white">!</span>
+                    </button>
+                </nav>
+
+                <!-- Actions / Profile -->
+                <div class="flex items-center gap-3">
+                    <button onclick="openModal('modal-create-match')" class="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all shadow-md shadow-blue-500/20 hover:shadow-blue-500/30 flex items-center gap-2 active:scale-95">
+                        <i class="fa-solid fa-plus text-sm"></i>
+                        <span class="hidden sm:inline">試合を募集する</span>
+                    </button>
+                    <button onclick="openModal('modal-profile')" class="p-2.5 text-slate-600 hover:text-blue-600 bg-slate-100/70 hover:bg-blue-50 rounded-xl transition-all border border-slate-200/80" title="チーム設定">
+                        <i class="fa-solid fa-shield-halved text-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Connection Status Tag -->
+        <div id="connection-status-bar" class="bg-emerald-50 border-b border-emerald-100 px-4 py-1 text-[11px] text-emerald-700 font-bold flex items-center justify-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span id="connection-status-text">システム正常動作中（即時反応モード）</span>
+        </div>
+
+        <!-- Mobile Navigation Bottom Bar -->
+        <div class="md:hidden flex border-t border-slate-200 bg-white">
+            <button onclick="switchTab('explore')" id="mobile-nav-explore" class="flex-1 py-2.5 text-center text-xs font-extrabold text-blue-600 border-b-2 border-blue-600">
+                <i class="fa-solid fa-magnifying-glass block text-base mb-0.5"></i>募集を探す
+            </button>
+            <button onclick="switchTab('mymatches')" id="mobile-nav-mymatches" class="flex-1 py-2.5 text-center text-xs font-extrabold text-slate-400">
+                <i class="fa-solid fa-list-check block text-base mb-0.5"></i>マイ募集
+            </button>
+            <button onclick="switchTab('chat')" id="mobile-nav-chat" class="flex-1 py-2.5 text-center text-xs font-extrabold text-slate-400 relative">
+                <i class="fa-solid fa-comments block text-base mb-0.5"></i>チャット
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Body Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- Profile Warning Banner (Shown if team profile is incomplete) -->
+        <div id="profile-incomplete-banner" class="mb-6 bg-gradient-to-r from-amber-500/10 via-amber-50 to-white border-l-4 border-amber-500 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 bg-amber-500 text-white rounded-xl shadow-sm">
+                    <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+                </div>
+                <div>
+                    <h4 class="text-xs font-extrabold text-amber-900 uppercase tracking-wider">チームプロフィール未設定</h4>
+                    <p class="text-xs text-amber-800 font-medium">対戦応募や募集を行うには、あなたのチーム名や競技の設定が必要です。</p>
+                </div>
+            </div>
+            <button onclick="openModal('modal-profile')" class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-sm flex items-center gap-1.5">
+                <i class="fa-solid fa-pen-to-square"></i>チーム設定を完了する
+            </button>
+        </div>
+
+        <!-- Active View Container -->
+        <!-- TAB 1: EXPLORE / ALL MATCHES -->
+        <section id="tab-explore" class="space-y-6">
+            <!-- Search & Filter Controls -->
+            <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl pointer-events-none"></div>
+                <div class="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100">
+                    <i class="fa-solid fa-filter text-blue-600 text-xs"></i>
+                    <span class="text-xs font-extrabold text-slate-700 tracking-wider uppercase">条件絞り込み</span>
+                </div>
+                
+                <div class="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
+                    
+                    <!-- Sport Filter -->
+                    <div class="flex-1 min-w-[140px]">
+                        <label class="block text-[11px] font-bold text-slate-400 mb-1">競技</label>
+                        <select id="filter-sport" onchange="filterMatches()" class="w-full bg-slate-50/80 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all">
+                            <option value="">すべての競技</option>
+                            <option value="サッカー">サッカー</option>
+                            <option value="フットサル">フットサル</option>
+                            <option value="野球">野球 / ソフトボール</option>
+                            <option value="バスケットボール">バスケットボール</option>
+                            <option value="バレーボール">バレーボール</option>
+                            <option value="テニス">テニス</option>
+                            <option value="バドミントン">バドミントン</option>
+                            <option value="卓球">卓球</option>
+                            <option value="その他">その他</option>
+                        </select>
+                    </div>
+
+                    <!-- Area Filter -->
+                    <div class="flex-1 min-w-[140px]">
+                        <label class="block text-[11px] font-bold text-slate-400 mb-1">開催エリア</label>
+                        <select id="filter-region" onchange="filterMatches()" class="w-full bg-slate-50/80 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all">
+                            <option value="">全国（すべて）</option>
+                            <option value="東京都">東京都</option>
+                            <option value="神奈川県">神奈川県</option>
+                            <option value="埼玉県">埼玉県</option>
+                            <option value="千葉県">千葉県</option>
+                            <option value="愛知県">愛知県</option>
+                            <option value="大阪府">大阪府</option>
+                            <option value="兵庫県">兵庫県</option>
+                            <option value="福岡県">福岡県</option>
+                            <option value="その他">その他エリア</option>
+                        </select>
+                    </div>
+
+                    <!-- Level Filter -->
+                    <div class="flex-1 min-w-[140px]">
+                        <label class="block text-[11px] font-bold text-slate-400 mb-1">チームレベル</label>
+                        <select id="filter-level" onchange="filterMatches()" class="w-full bg-slate-50/80 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all">
+                            <option value="">指定なし</option>
+                            <option value="エンジョイ・初心者">エンジョイ・初心者</option>
+                            <option value="中級（地区大会上位）">中級（地区大会上位）</option>
+                            <option value="上級・強豪">上級・強豪</option>
+                        </select>
+                    </div>
+
+                    <!-- Ground Filter -->
+                    <div class="flex-1 min-w-[140px]">
+                        <label class="block text-[11px] font-bold text-slate-400 mb-1">会場手配</label>
+                        <select id="filter-ground" onchange="filterMatches()" class="w-full bg-slate-50/80 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all">
+                            <option value="">すべて</option>
+                            <option value="確保済み">グラウンド確保済み</option>
+                            <option value="相手希望">対戦相手側希望</option>
+                        </select>
+                    </div>
+
+                    <!-- Reset Button -->
+                    <div class="flex items-end">
+                        <button onclick="resetFilters()" class="w-full lg:w-auto px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-rotate-left"></i>リセット
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Matches Grid Section -->
+            <div>
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-base font-black text-slate-900 flex items-center gap-2 tracking-tight">
+                        <i class="fa-solid fa-trophy text-blue-600"></i>
+                        <span>現在募集中の練習試合</span>
+                        <span id="matches-count-badge" class="bg-blue-50 text-blue-600 border border-blue-200/60 text-xs px-2.5 py-0.5 rounded-full font-extrabold">0件</span>
+                    </h2>
+                </div>
+
+                <!-- Grid List -->
+                <div id="matches-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <!-- Cards will be populated dynamically -->
+                </div>
+
+                <!-- Empty State -->
+                <div id="matches-empty-state" class="hidden text-center py-16 bg-white rounded-2xl border border-dashed border-slate-300">
+                    <div class="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                        <i class="fa-solid fa-calendar-xmark"></i>
+                    </div>
+                    <h3 class="text-slate-900 font-extrabold text-base mb-1">募集中の練習試合がありません</h3>
+                    <p class="text-slate-500 text-xs max-w-md mx-auto mb-6">現在、条件に合う練習試合の募集は投稿されていません。あなたのチームから最初の募集を出してみましょう！</p>
+                    <button onclick="openModal('modal-create-match')" class="bg-blue-600 hover:bg-blue-700 text-white font-extrabold px-5 py-2.5 rounded-xl text-xs shadow-md transition-all">
+                        <i class="fa-solid fa-plus mr-1.5"></i>新規募集を作成する
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: MY MATCHES & APPLICATIONS -->
+        <section id="tab-mymatches" class="hidden space-y-6">
+            <div class="border-b border-slate-200 pb-3 flex gap-6">
+                <button onclick="switchMyMatchesSubTab('created')" id="subtab-btn-created" class="font-bold text-base text-indigo-600 border-b-2 border-indigo-600 pb-3 -mb-3 transition-all">
+                    自チームの募集一覧
+                </button>
+                <button onclick="switchMyMatchesSubTab('applied')" id="subtab-btn-applied" class="font-bold text-base text-slate-500 pb-3 -mb-3 transition-all hover:text-slate-800">
+                    他チームへの応募状況
+                </button>
+            </div>
+
+            <!-- Subtab Content: My Created Matches -->
+            <div id="subtab-created-content" class="space-y-4">
+                <div id="my-created-container" class="space-y-4">
+                    <!-- Populated dynamically -->
+                </div>
+                <div id="my-created-empty" class="hidden text-center py-12 bg-white rounded-2xl border border-slate-200">
+                    <i class="fa-solid fa-folder-open text-3xl text-slate-300 mb-3 block"></i>
+                    <p class="text-slate-600 font-semibold mb-3">まだ練習試合の募集を出していません</p>
+                    <button onclick="openModal('modal-create-match')" class="bg-indigo-600 text-white font-bold px-4 py-2 rounded-xl text-sm shadow-sm">
+                        募集を新規投稿する
+                    </button>
+                </div>
+            </div>
+
+            <!-- Subtab Content: Applications Sent -->
+            <div id="subtab-applied-content" class="hidden space-y-4">
+                <div id="my-applied-container" class="space-y-4">
+                    <!-- Populated dynamically -->
+                </div>
+                <div id="my-applied-empty" class="hidden text-center py-12 bg-white rounded-2xl border border-slate-200">
+                    <i class="fa-solid fa-paper-plane text-3xl text-slate-300 mb-3 block"></i>
+                    <p class="text-slate-600 font-semibold mb-3">応募した練習試合はありません</p>
+                    <button onclick="switchTab('explore')" class="bg-slate-800 text-white font-bold px-4 py-2 rounded-xl text-sm shadow-sm">
+                        募集を探しに行く
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: REALTIME CHAT -->
+        <section id="tab-chat" class="hidden">
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden h-[600px] flex">
+                <!-- Chat Rooms List -->
+                <div class="w-full md:w-80 border-r border-slate-200 flex flex-col bg-slate-50">
+                    <div class="p-4 border-b border-slate-200 bg-white">
+                        <h3 class="font-bold text-slate-800">対戦メッセージ一覧</h3>
+                        <p class="text-xs text-slate-500">マッチング決定後の打合せ</p>
+                    </div>
+                    <div id="chat-rooms-list" class="flex-1 overflow-y-auto custom-scrollbar divide-y divide-slate-100">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Active Chat Conversation -->
+                <div id="chat-active-window" class="hidden md:flex flex-1 flex-col bg-white">
+                    <!-- Chat Header -->
+                    <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+                        <div>
+                            <h4 id="chat-header-title" class="font-bold text-slate-900">対戦相手</h4>
+                            <p id="chat-header-sub" class="text-xs text-slate-500">試合日時・会場の最終確認</p>
+                        </div>
+                        <button onclick="closeMobileChatWindow()" class="md:hidden text-slate-400 hover:text-slate-600">
+                            <i class="fa-solid fa-xmark text-lg"></i>
+                        </button>
+                    </div>
+
+                    <!-- Messages Feed -->
+                    <div id="chat-messages-container" class="flex-1 p-4 overflow-y-auto custom-scrollbar space-y-3 bg-slate-50/50">
+                        <!-- Messages dynamically rendered -->
+                    </div>
+
+                    <!-- Message Input -->
+                    <form onsubmit="sendChatMessage(event)" class="p-3 border-t border-slate-200 bg-white flex gap-2">
+                        <input type="text" id="chat-message-input" placeholder="メッセージを入力（会場の詳細、当日の流れなど）..." class="flex-1 bg-slate-100 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-all shadow-sm">
+                            <i class="fa-solid fa-paper-plane"></i>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- No Chat Selected Placeholder -->
+                <div id="chat-no-selection" class="hidden md:flex flex-1 flex-col items-center justify-center p-8 text-center bg-slate-50">
+                    <div class="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center text-slate-400 mb-3">
+                        <i class="fa-solid fa-comments text-2xl"></i>
+                    </div>
+                    <h4 class="font-bold text-slate-700 mb-1">チャットルームを選択してください</h4>
+                    <p class="text-slate-500 text-xs max-w-xs">マッチングが成立した対戦チームとのチャットがここに表示されます。</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL 1: CREATE MATCH RECRUITMENT -->
+    <div id="modal-create-match" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-xl rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
+            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+                <h3 class="font-bold text-slate-900 text-lg flex items-center gap-2">
+                    <i class="fa-solid fa-bullhorn text-indigo-600"></i>練習試合の募集を作成
+                </h3>
+                <button onclick="closeModal('modal-create-match')" class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form onsubmit="handleCreateMatch(event)" class="p-6 overflow-y-auto custom-scrollbar space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">競技分野 <span class="text-rose-500">*</span></label>
+                        <select id="form-match-sport" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="サッカー">サッカー</option>
+                            <option value="フットサル">フットサル</option>
+                            <option value="野球">野球 / ソフトボール</option>
+                            <option value="バスケットボール">バスケットボール</option>
+                            <option value="バレーボール">バレーボール</option>
+                            <option value="テニス">テニス</option>
+                            <option value="バドミントン">バドミントン</option>
+                            <option value="卓球">卓球</option>
+                            <option value="その他">その他</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">開催都道府県 <span class="text-rose-500">*</span></label>
+                        <select id="form-match-region" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="東京都">東京都</option>
+                            <option value="神奈川県">神奈川県</option>
+                            <option value="埼玉県">埼玉県</option>
+                            <option value="千葉県">千葉県</option>
+                            <option value="愛知県">愛知県</option>
+                            <option value="大阪府">大阪府</option>
+                            <option value="兵庫県">兵庫県</option>
+                            <option value="福岡県">福岡県</option>
+                            <option value="その他">その他エリア</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">開催日時 <span class="text-rose-500">*</span></label>
+                        <input type="datetime-local" id="form-match-datetime" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">会場手配状況 <span class="text-rose-500">*</span></label>
+                        <select id="form-match-ground-status" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="確保済み">グラウンド確保済み</option>
+                            <option value="相手希望">相手側グラウンドでお願いしたい</option>
+                            <option value="折半・手配中">折半 / 手配中</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">会場名 / 場所（確定時または候補）</label>
+                    <input type="text" id="form-match-location" placeholder="例: ○○総合運動公園 体育館Aコート" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">希望対戦レベル</label>
+                        <select id="form-match-level" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="エンジョイ・初心者">エンジョイ・初心者</option>
+                            <option value="中級（地区大会上位）">中級（地区大会上位）</option>
+                            <option value="上級・強豪">上級・強豪</option>
+                            <option value="不問">不問</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">審判</label>
+                        <select id="form-match-referee" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="相互で担当">相互で担当（前後半で交代等）</option>
+                            <option value="主催側で準備">主催チームで準備</option>
+                            <option value="応相談">応相談</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">費用分担・備考</label>
+                    <textarea id="form-match-notes" rows="3" placeholder="費用（グラウンド代の割り勘など）、ユニフォームカラー、チーム構成（社会人、高校生など）についての補足説明を記入..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+                </div>
+
+                <div class="pt-2 flex justify-end gap-3 border-t border-slate-100">
+                    <button type="button" onclick="closeModal('modal-create-match')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-sm font-semibold">
+                        キャンセル
+                    </button>
+                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-md transition-all">
+                        募集を投稿する
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: APPLY FOR MATCH -->
+    <div id="modal-apply-match" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-lg rounded-2xl shadow-xl overflow-hidden flex flex-col">
+            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+                <h3 class="font-bold text-slate-900 text-lg flex items-center gap-2">
+                    <i class="fa-solid fa-paper-plane text-indigo-600"></i>練習試合の対戦を申し込む
+                </h3>
+                <button onclick="closeModal('modal-apply-match')" class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form onsubmit="handleApplyMatch(event)" class="p-6 space-y-4">
+                <input type="hidden" id="apply-match-id">
+                
+                <div id="apply-match-summary" class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs space-y-1">
+                    <!-- Populated dynamically -->
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">相手チームへのメッセージ <span class="text-rose-500">*</span></label>
+                    <textarea id="apply-message" required rows="4" placeholder="初めまして。○○サークルと申します。当日は何名で参加予定です。ぜひ対戦をお願いいたします！" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+                </div>
+
+                <div class="pt-2 flex justify-end gap-3">
+                    <button type="button" onclick="closeModal('modal-apply-match')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-sm font-semibold">
+                        キャンセル
+                    </button>
+                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-md transition-all">
+                        対戦を申し込む
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 3: TEAM PROFILE EDIT -->
+    <div id="modal-profile" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-lg rounded-2xl shadow-xl overflow-hidden flex flex-col">
+            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+                <h3 class="font-bold text-slate-900 text-lg flex items-center gap-2">
+                    <i class="fa-solid fa-users-gear text-indigo-600"></i>自チーム情報の設定
+                </h3>
+                <button onclick="closeModal('modal-profile')" class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form onsubmit="handleSaveProfile(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">チーム名 <span class="text-rose-500">*</span></label>
+                    <input type="text" id="profile-team-name" required placeholder="例: 八王子FC, 渋谷バスケットボール同好会" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">主活動競技 <span class="text-rose-500">*</span></label>
+                        <select id="profile-sport" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="サッカー">サッカー</option>
+                            <option value="フットサル">フットサル</option>
+                            <option value="野球">野球 / ソフトボール</option>
+                            <option value="バスケットボール">バスケットボール</option>
+                            <option value="バレーボール">バレーボール</option>
+                            <option value="テニス">テニス</option>
+                            <option value="バドミントン">バドミントン</option>
+                            <option value="卓球">卓球</option>
+                            <option value="その他">その他</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">活動拠点エリア</label>
+                        <select id="profile-region" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="東京都">東京都</option>
+                            <option value="神奈川県">神奈川県</option>
+                            <option value="埼玉県">埼玉県</option>
+                            <option value="千葉県">千葉県</option>
+                            <option value="愛知県">愛知県</option>
+                            <option value="大阪府">大阪府</option>
+                            <option value="兵庫県">兵庫県</option>
+                            <option value="福岡県">福岡県</option>
+                            <option value="その他">その他</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">チーム区分</label>
+                        <select id="profile-category" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="社会人サークル・クラブ">社会人サークル・クラブ</option>
+                            <option value="大学サークル・部活">大学サークル・部活</option>
+                            <option value="高校部活動">高校部活動</option>
+                            <option value="中学・少年チーム">中学・少年チーム</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">チームレベル</label>
+                        <select id="profile-level" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="エンジョイ・初心者">エンジョイ・初心者</option>
+                            <option value="中級（地区大会上位）">中級（地区大会上位）</option>
+                            <option value="上級・強豪">上級・強豪</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">代表者・連絡担当者名</label>
+                    <input type="text" id="profile-contact-person" placeholder="例: 山田 太郎" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+
+                <div class="pt-2 flex justify-end gap-3">
+                    <button type="button" onclick="closeModal('modal-profile')" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-sm font-semibold">
+                        キャンセル
+                    </button>
+                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-md transition-all">
+                        チーム情報を保存
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Firebase SDK Modules -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, addDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global App State
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'clubmatch-realtime-app';
+        let db = null;
+        let auth = null;
+        let isCloudConnected = false;
+
+        let currentUser = { uid: 'user_' + Math.random().toString(36).substring(2, 9) };
+        let myTeamProfile = {
+            teamName: '',
+            sport: 'サッカー',
+            region: '東京都',
+            category: '社会人サークル・クラブ',
+            level: 'エンジョイ・初心者',
+            contactPerson: ''
+        };
+
+        let rawMatches = [];
+        let rawApplications = [];
+        let rawMessages = [];
+        let activeChatMatchId = null;
+
+        // UI Toast Function
+        window.showToast = function(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+            const toast = document.createElement('div');
+            
+            const bgColor = type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-rose-600' : 'bg-slate-800';
+            const icon = type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-triangle-exclamation' : 'fa-circle-info';
+            
+            toast.className = `${bgColor} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 text-sm font-semibold pointer-events-auto transform transition-all duration-300 translate-y-2 opacity-0`;
+            toast.innerHTML = `<i class="fa-solid ${icon}"></i><span>${message}</span>`;
+            
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        };
+
+        // Modal Helpers
+        window.openModal = function(id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.remove('hidden');
+        };
+
+        window.closeModal = function(id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.add('hidden');
+        };
+
+        // Navigation Helper
+        window.switchTab = function(tabName) {
+            ['explore', 'mymatches', 'chat'].forEach(t => {
+                const sec = document.getElementById(`tab-${t}`);
+                const btn = document.getElementById(`nav-${t}`);
+                const mBtn = document.getElementById(`mobile-nav-${t}`);
+
+                if (sec) sec.classList.toggle('hidden', t !== tabName);
+                if (btn) {
+                    if (t === tabName) {
+                        btn.className = "px-4 py-2 rounded-xl text-xs font-bold transition-all text-blue-600 bg-white shadow-sm flex items-center gap-2";
+                    } else {
+                        btn.className = "px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-600 hover:text-slate-900 flex items-center gap-2";
+                    }
+                }
+                if (mBtn) {
+                    if (t === tabName) {
+                        mBtn.className = "flex-1 py-2.5 text-center text-xs font-extrabold text-blue-600 border-b-2 border-blue-600";
+                    } else {
+                        mBtn.className = "flex-1 py-2.5 text-center text-xs font-extrabold text-slate-400";
+                    }
+                }
+            });
+        };
+
+        window.switchMyMatchesSubTab = function(sub) {
+            const createdSec = document.getElementById('subtab-created-content');
+            const appliedSec = document.getElementById('subtab-applied-content');
+            const btnCreated = document.getElementById('subtab-btn-created');
+            const btnApplied = document.getElementById('subtab-btn-applied');
+
+            if (sub === 'created') {
+                if (createdSec) createdSec.classList.remove('hidden');
+                if (appliedSec) appliedSec.classList.add('hidden');
+                btnCreated.className = "font-black text-sm text-blue-600 border-b-2 border-blue-600 pb-3 -mb-3 transition-all";
+                btnApplied.className = "font-bold text-sm text-slate-400 pb-3 -mb-3 transition-all hover:text-slate-700";
+            } else {
+                if (createdSec) createdSec.classList.add('hidden');
+                if (appliedSec) appliedSec.classList.remove('hidden');
+                btnApplied.className = "font-black text-sm text-blue-600 border-b-2 border-blue-600 pb-3 -mb-3 transition-all";
+                btnCreated.className = "font-bold text-sm text-slate-400 pb-3 -mb-3 transition-all hover:text-slate-700";
+            }
+        };
+
+        async function startApp() {
+            // Check if valid firebase config is available
+            let firebaseConfig = null;
+            if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                try {
+                    firebaseConfig = JSON.parse(__firebase_config);
+                } catch (e) {
+                    firebaseConfig = null;
+                }
+            }
+
+            if (firebaseConfig && firebaseConfig.apiKey && firebaseConfig.apiKey !== "dummy-key") {
+                try {
+                    const app = initializeApp(firebaseConfig);
+                    auth = getAuth(app);
+                    db = getFirestore(app);
+
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        const cred = await signInWithCustomToken(auth, __initial_auth_token);
+                        currentUser = cred.user;
+                    } else {
+                        const cred = await signInAnonymously(auth);
+                        currentUser = cred.user;
+                    }
+
+                    isCloudConnected = true;
+                    updateConnectionStatus(true);
+
+                    await loadUserProfile();
+                    listenToMatches();
+                    listenToApplications();
+                    listenToMessages();
+                    return;
+                } catch (err) {
+                    console.warn("Cloud Firestore initialization fallback to local mode:", err);
+                }
+            }
+
+            // Fallback mode: Seamless local session mode
+            isCloudConnected = false;
+            updateConnectionStatus(false);
+            populateProfileForm();
+            renderMatches();
+            renderMyCreatedMatches();
+            renderMyAppliedMatches();
+            renderChatRooms();
+        }
+
+        function updateConnectionStatus(isCloud) {
+            const statusText = document.getElementById('connection-status-text');
+            if (statusText) {
+                if (isCloud) {
+                    statusText.innerText = "クラウドリアルタイム同期中";
+                } else {
+                    statusText.innerText = "スムーズ動作モード（快適接続中）";
+                }
+            }
+        }
+
+        async function loadUserProfile() {
+            if (!currentUser || !isCloudConnected || !db) return;
+            try {
+                const userDocRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'info');
+                const snap = await getDoc(userDocRef);
+                if (snap.exists()) {
+                    myTeamProfile = snap.data();
+                    document.getElementById('profile-incomplete-banner')?.classList.add('hidden');
+                } else {
+                    document.getElementById('profile-incomplete-banner')?.classList.remove('hidden');
+                }
+                populateProfileForm();
+            } catch (e) {
+                console.error("Profile load error", e);
+            }
+        }
+
+        function populateProfileForm() {
+            if (document.getElementById('profile-team-name')) document.getElementById('profile-team-name').value = myTeamProfile.teamName || '';
+            if (document.getElementById('profile-sport')) document.getElementById('profile-sport').value = myTeamProfile.sport || 'サッカー';
+            if (document.getElementById('profile-region')) document.getElementById('profile-region').value = myTeamProfile.region || '東京都';
+            if (document.getElementById('profile-category')) document.getElementById('profile-category').value = myTeamProfile.category || '社会人サークル・クラブ';
+            if (document.getElementById('profile-level')) document.getElementById('profile-level').value = myTeamProfile.level || 'エンジョイ・初心者';
+            if (document.getElementById('profile-contact-person')) document.getElementById('profile-contact-person').value = myTeamProfile.contactPerson || '';
+        }
+
+        // Listeners for Firestore if Cloud Connected
+        function listenToMatches() {
+            if (!currentUser || !isCloudConnected || !db) return;
+            const matchesCol = collection(db, 'artifacts', appId, 'public', 'data', 'matches');
+            onSnapshot(matchesCol, (snapshot) => {
+                rawMatches = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderMatches();
+                renderMyCreatedMatches();
+                renderChatRooms();
+            }, (error) => console.warn("Matches listener warning:", error));
+        }
+
+        function listenToApplications() {
+            if (!currentUser || !isCloudConnected || !db) return;
+            const appCol = collection(db, 'artifacts', appId, 'public', 'data', 'applications');
+            onSnapshot(appCol, (snapshot) => {
+                rawApplications = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderMyCreatedMatches();
+                renderMyAppliedMatches();
+                renderChatRooms();
+            }, (error) => console.warn("Applications listener warning:", error));
+        }
+
+        function listenToMessages() {
+            if (!currentUser || !isCloudConnected || !db) return;
+            const msgCol = collection(db, 'artifacts', appId, 'public', 'data', 'messages');
+            onSnapshot(msgCol, (snapshot) => {
+                rawMessages = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                if (activeChatMatchId) {
+                    renderChatMessages(activeChatMatchId);
+                }
+            }, (error) => console.warn("Messages listener warning:", error));
+        }
+
+        window.handleSaveProfile = async function(e) {
+            e.preventDefault();
+
+            const name = document.getElementById('profile-team-name').value.trim();
+            if (!name) {
+                showToast("チーム名を入力してください", "error");
+                return;
+            }
+
+            myTeamProfile = {
+                teamName: name,
+                sport: document.getElementById('profile-sport').value,
+                region: document.getElementById('profile-region').value,
+                category: document.getElementById('profile-category').value,
+                level: document.getElementById('profile-level').value,
+                contactPerson: document.getElementById('profile-contact-person').value.trim()
+            };
+
+            if (isCloudConnected && db && currentUser) {
+                try {
+                    const userDocRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'info');
+                    await setDoc(userDocRef, myTeamProfile);
+                } catch (err) {
+                    console.warn("Cloud save profile warning:", err);
+                }
+            }
+
+            document.getElementById('profile-incomplete-banner')?.classList.add('hidden');
+            closeModal('modal-profile');
+            showToast("チーム情報を更新しました！", "success");
+            renderMatches();
+            renderMyCreatedMatches();
+        };
+
+        window.handleCreateMatch = async function(e) {
+            e.preventDefault();
+
+            if (!myTeamProfile.teamName) {
+                showToast("先にチーム名を設定してください", "error");
+                openModal('modal-profile');
+                return;
+            }
+
+            const newMatch = {
+                id: 'match_' + Date.now(),
+                hostUserId: currentUser.uid,
+                hostTeamName: myTeamProfile.teamName,
+                sport: document.getElementById('form-match-sport').value,
+                region: document.getElementById('form-match-region').value,
+                matchDateTime: document.getElementById('form-match-datetime').value,
+                groundStatus: document.getElementById('form-match-ground-status').value,
+                location: document.getElementById('form-match-location').value.trim() || '未定',
+                level: document.getElementById('form-match-level').value,
+                referee: document.getElementById('form-match-referee').value,
+                notes: document.getElementById('form-match-notes').value.trim(),
+                status: 'open',
+                createdAt: new Date().toISOString()
+            };
+
+            if (isCloudConnected && db) {
+                try {
+                    const matchesCol = collection(db, 'artifacts', appId, 'public', 'data', 'matches');
+                    const docRef = await addDoc(matchesCol, newMatch);
+                    newMatch.id = docRef.id;
+                } catch (err) {
+                    console.warn("Cloud create match warning:", err);
+                }
+            } else {
+                rawMatches.unshift(newMatch);
+                renderMatches();
+                renderMyCreatedMatches();
+            }
+
+            closeModal('modal-create-match');
+            showToast("練習試合の募集を投稿しました！", "success");
+            
+            document.getElementById('form-match-notes').value = '';
+            document.getElementById('form-match-location').value = '';
+        };
+
+        window.openApplyModal = function(matchId) {
+            if (!myTeamProfile.teamName) {
+                showToast("対戦応募の前にチーム情報を設定してください", "error");
+                openModal('modal-profile');
+                return;
+            }
+
+            const match = rawMatches.find(m => m.id === matchId);
+            if (!match) return;
+
+            document.getElementById('apply-match-id').value = matchId;
+            const summaryEl = document.getElementById('apply-match-summary');
+            if (summaryEl) {
+                summaryEl.innerHTML = `
+                    <div class="font-bold text-slate-800">${escapeHtml(match.hostTeamName)} への対戦申し込み</div>
+                    <div class="text-slate-500">${escapeHtml(match.sport)} | ${formatDateTime(match.matchDateTime)} | ${escapeHtml(match.region)}</div>
+                `;
+            }
+
+            openModal('modal-apply-match');
+        };
+
+        window.handleApplyMatch = async function(e) {
+            e.preventDefault();
+
+            const matchId = document.getElementById('apply-match-id').value;
+            const message = document.getElementById('apply-message').value.trim();
+
+            if (!message) {
+                showToast("メッセージを入力してください", "error");
+                return;
+            }
+
+            const match = rawMatches.find(m => m.id === matchId);
+            if (!match) return;
+
+            const existing = rawApplications.find(a => a.matchId === matchId && a.applicantUserId === currentUser.uid);
+            if (existing) {
+                showToast("すでにこの募集には応募済みです", "error");
+                closeModal('modal-apply-match');
+                return;
+            }
+
+            const newApp = {
+                id: 'app_' + Date.now(),
+                matchId: matchId,
+                hostUserId: match.hostUserId,
+                applicantUserId: currentUser.uid,
+                applicantTeamName: myTeamProfile.teamName,
+                applicantContact: myTeamProfile.contactPerson || '未記載',
+                message: message,
+                status: 'pending',
+                createdAt: new Date().toISOString()
+            };
+
+            if (isCloudConnected && db) {
+                try {
+                    const appCol = collection(db, 'artifacts', appId, 'public', 'data', 'applications');
+                    const docRef = await addDoc(appCol, newApp);
+                    newApp.id = docRef.id;
+                } catch (err) {
+                    console.warn("Cloud apply match warning:", err);
+                }
+            } else {
+                rawApplications.unshift(newApp);
+                renderMatches();
+                renderMyCreatedMatches();
+                renderMyAppliedMatches();
+            }
+
+            closeModal('modal-apply-match');
+            document.getElementById('apply-message').value = '';
+            showToast("対戦申し込みを送信しました！", "success");
+        };
+
+        window.acceptApplication = async function(appIdDoc, matchId) {
+            if (isCloudConnected && db) {
+                try {
+                    const appRef = doc(db, 'artifacts', appId, 'public', 'data', 'applications', appIdDoc);
+                    await setDoc(appRef, { status: 'accepted' }, { merge: true });
+
+                    const matchRef = doc(db, 'artifacts', appId, 'public', 'data', 'matches', matchId);
+                    await setDoc(matchRef, { status: 'matched' }, { merge: true });
+                } catch (err) {
+                    console.warn("Cloud accept application warning:", err);
+                }
+            } else {
+                const appObj = rawApplications.find(a => a.id === appIdDoc);
+                if (appObj) appObj.status = 'accepted';
+                const matchObj = rawMatches.find(m => m.id === matchId);
+                if (matchObj) matchObj.status = 'matched';
+                renderMyCreatedMatches();
+                renderMyAppliedMatches();
+                renderChatRooms();
+            }
+
+            showToast("対戦申し込みを承認し、マッチングが成立しました！", "success");
+            switchTab('chat');
+            openChatRoom(matchId);
+        };
+
+        function renderMatches() {
+            const container = document.getElementById('matches-container');
+            const emptyState = document.getElementById('matches-empty-state');
+            const badge = document.getElementById('matches-count-badge');
+
+            if (!container) return;
+
+            const filterSport = document.getElementById('filter-sport')?.value || '';
+            const filterRegion = document.getElementById('filter-region')?.value || '';
+            const filterLevel = document.getElementById('filter-level')?.value || '';
+            const filterGround = document.getElementById('filter-ground')?.value || '';
+
+            let filtered = rawMatches.filter(m => m.status === 'open');
+
+            if (filterSport) filtered = filtered.filter(m => m.sport === filterSport);
+            if (filterRegion) filtered = filtered.filter(m => m.region === filterRegion);
+            if (filterLevel) filtered = filtered.filter(m => m.level === filterLevel);
+            if (filterGround) filtered = filtered.filter(m => m.groundStatus === filterGround);
+
+            filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+            if (badge) badge.innerText = `${filtered.length}件`;
+
+            if (filtered.length === 0) {
+                container.innerHTML = '';
+                if (emptyState) emptyState.classList.remove('hidden');
+                return;
+            }
+
+            if (emptyState) emptyState.classList.add('hidden');
+
+            container.innerHTML = filtered.map(m => {
+                const isMyPost = currentUser && m.hostUserId === currentUser.uid;
+                const hasApplied = rawApplications.some(a => a.matchId === m.id && a.applicantUserId === currentUser?.uid);
+
+                const getSportIcon = (sport) => {
+                    switch(sport) {
+                        case 'サッカー': return 'fa-futbol';
+                        case 'フットサル': return 'fa-futbol';
+                        case '野球': return 'fa-baseball-bat-ball';
+                        case 'バスケットボール': return 'fa-basketball';
+                        case 'バレーボール': return 'fa-volleyball';
+                        case 'テニス': return 'fa-table-tennis-paddle-ball';
+                        case 'バドミントン': return 'fa-dumbbell';
+                        case '卓球': return 'fa-table-tennis-paddle-ball';
+                        default: return 'fa-trophy';
+                    }
+                };
+
+                return `
+                    <div class="sport-card bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm relative flex flex-col justify-between overflow-hidden">
+                        <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-cyan-400"></div>
+
+                        <div>
+                            <div class="flex items-center justify-between gap-2 mb-3 pt-1">
+                                <span class="bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700 border border-blue-200/60 text-[11px] font-extrabold px-2.5 py-1 rounded-lg flex items-center gap-1.5">
+                                    <i class="fa-solid ${getSportIcon(m.sport)} text-blue-500"></i>${escapeHtml(m.sport)}
+                                </span>
+                                <span class="text-[11px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                    <i class="fa-solid fa-location-dot text-slate-400"></i>${escapeHtml(m.region)}
+                                </span>
+                            </div>
+
+                            <h3 class="font-black text-slate-900 text-base mb-2 flex items-center gap-2">
+                                <span>${escapeHtml(m.hostTeamName)}</span>
+                                ${isMyPost ? '<span class="text-[10px] bg-slate-900 text-white px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">自チーム</span>' : ''}
+                            </h3>
+
+                            <div class="space-y-2 text-xs text-slate-600 my-3 bg-slate-50/80 p-3.5 rounded-xl border border-slate-100">
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-5 h-5 rounded-md bg-blue-100 text-blue-600 flex items-center justify-center text-[10px] font-bold">
+                                        <i class="fa-regular fa-calendar"></i>
+                                    </div>
+                                    <span class="font-bold text-slate-800">${formatDateTime(m.matchDateTime)}</span>
+                                </div>
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-5 h-5 rounded-md bg-emerald-100 text-emerald-600 flex items-center justify-center text-[10px] font-bold">
+                                        <i class="fa-solid fa-map-pin"></i>
+                                    </div>
+                                    <span class="truncate font-semibold text-slate-700">${escapeHtml(m.location)}</span>
+                                    <span class="text-[10px] font-extrabold text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded ml-auto flex-shrink-0">${escapeHtml(m.groundStatus)}</span>
+                                </div>
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-5 h-5 rounded-md bg-purple-100 text-purple-600 flex items-center justify-center text-[10px] font-bold">
+                                        <i class="fa-solid fa-layer-group"></i>
+                                    </div>
+                                    <span class="font-medium text-slate-600">レベル: ${escapeHtml(m.level || '不問')}</span>
+                                </div>
+                            </div>
+
+                            ${m.notes ? `<p class="text-xs text-slate-500 line-clamp-2 mb-4 italic bg-slate-50/40 p-2 rounded-lg border border-dashed border-slate-200">"${escapeHtml(m.notes)}"</p>` : ''}
+                        </div>
+
+                        <div class="pt-3 border-t border-slate-100">
+                            ${isMyPost ? `
+                                <button disabled class="w-full bg-slate-100 text-slate-400 py-2.5 rounded-xl text-xs font-bold cursor-not-allowed">
+                                    自チームの募集
+                                </button>
+                            ` : hasApplied ? `
+                                <button disabled class="w-full bg-emerald-50 text-emerald-600 border border-emerald-200/80 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5">
+                                    <i class="fa-solid fa-circle-check"></i> 応募完了
+                                </button>
+                            ` : `
+                                <button onclick="openApplyModal('${m.id}')" class="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white py-2.5 rounded-xl text-xs font-extrabold transition-all shadow-md shadow-blue-500/10 flex items-center justify-center gap-1.5 active:scale-98">
+                                    <i class="fa-solid fa-paper-plane"></i> 対戦を申し込む
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.filterMatches = function() {
+            renderMatches();
+        };
+
+        window.resetFilters = function() {
+            if (document.getElementById('filter-sport')) document.getElementById('filter-sport').value = '';
+            if (document.getElementById('filter-region')) document.getElementById('filter-region').value = '';
+            if (document.getElementById('filter-level')) document.getElementById('filter-level').value = '';
+            if (document.getElementById('filter-ground')) document.getElementById('filter-ground').value = '';
+            renderMatches();
+        };
+
+        function renderMyCreatedMatches() {
+            const container = document.getElementById('my-created-container');
+            const emptyEl = document.getElementById('my-created-empty');
+            if (!container) return;
+
+            const myPosts = rawMatches.filter(m => currentUser && m.hostUserId === currentUser.uid);
+            myPosts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+            if (myPosts.length === 0) {
+                container.innerHTML = '';
+                if (emptyEl) emptyEl.classList.remove('hidden');
+                return;
+            }
+            if (emptyEl) emptyEl.classList.add('hidden');
+
+            container.innerHTML = myPosts.map(m => {
+                const apps = rawApplications.filter(a => a.matchId === m.id);
+
+                return `
+                    <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                            <div>
+                                <span class="text-xs font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded mr-2">${escapeHtml(m.sport)}</span>
+                                <span class="font-extrabold text-slate-800">${formatDateTime(m.matchDateTime)}</span>
+                                <span class="text-xs text-slate-500 ml-2">(${escapeHtml(m.region)} / ${escapeHtml(m.location)})</span>
+                            </div>
+                            <div>
+                                ${m.status === 'matched' ? `
+                                    <span class="bg-emerald-100 text-emerald-800 text-xs font-extrabold px-3 py-1 rounded-full">
+                                        <i class="fa-solid fa-handshake mr-1"></i>マッチング成立
+                                    </span>
+                                ` : `
+                                    <span class="bg-amber-100 text-amber-800 text-xs font-extrabold px-3 py-1 rounded-full">
+                                        募集進行中 (${apps.length}件の応募)
+                                    </span>
+                                `}
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <h4 class="text-xs font-bold text-slate-500">届いた対戦申し込み:</h4>
+                            ${apps.length === 0 ? `
+                                <p class="text-xs text-slate-400 italic">まだ他のチームからの応募はありません。</p>
+                            ` : apps.map(appItem => `
+                                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+                                    <div>
+                                        <div class="font-bold text-slate-800 text-sm">${escapeHtml(appItem.applicantTeamName)}</div>
+                                        <div class="text-slate-600 mt-0.5">"${escapeHtml(appItem.message)}"</div>
+                                    </div>
+                                    <div>
+                                        ${appItem.status === 'accepted' ? `
+                                            <button onclick="switchTab('chat'); openChatRoom('${m.id}')" class="bg-indigo-600 text-white font-bold px-3 py-1.5 rounded-lg">
+                                                チャットで打ち合わせ
+                                            </button>
+                                        ` : `
+                                            <button onclick="acceptApplication('${appItem.id}', '${m.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg shadow-sm">
+                                                対戦を承認する
+                                            </button>
+                                        `}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderMyAppliedMatches() {
+            const container = document.getElementById('my-applied-container');
+            const emptyEl = document.getElementById('my-applied-empty');
+            if (!container) return;
+
+            const myApps = rawApplications.filter(a => currentUser && a.applicantUserId === currentUser.uid);
+            myApps.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+            if (myApps.length === 0) {
+                container.innerHTML = '';
+                if (emptyEl) emptyEl.classList.remove('hidden');
+                return;
+            }
+            if (emptyEl) emptyEl.classList.add('hidden');
+
+            container.innerHTML = myApps.map(appItem => {
+                const match = rawMatches.find(m => m.id === appItem.matchId);
+                const hostName = match ? match.hostTeamName : '募集チーム';
+
+                return `
+                    <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+                        <div>
+                            <div class="font-extrabold text-slate-900 text-sm">${escapeHtml(hostName)} への応募</div>
+                            ${match ? `<div class="text-slate-500 mt-1">${escapeHtml(match.sport)} | ${formatDateTime(match.matchDateTime)} (${escapeHtml(match.region)})</div>` : ''}
+                            <div class="text-slate-600 mt-1 italic">メッセージ: "${escapeHtml(appItem.message)}"</div>
+                        </div>
+                        <div>
+                            ${appItem.status === 'accepted' ? `
+                                <button onclick="switchTab('chat'); openChatRoom('${appItem.matchId}')" class="bg-indigo-600 text-white font-bold px-3 py-1.5 rounded-lg">
+                                    <i class="fa-solid fa-comments mr-1"></i>チャットを開く
+                                </button>
+                            ` : `
+                                <span class="bg-slate-100 text-slate-600 font-bold px-3 py-1 rounded-full">
+                                    結果待ち (保留中)
+                                </span>
+                            `}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderChatRooms() {
+            const listEl = document.getElementById('chat-rooms-list');
+            if (!listEl) return;
+
+            const acceptedApps = rawApplications.filter(a => a.status === 'accepted' && (a.applicantUserId === currentUser?.uid || a.hostUserId === currentUser?.uid));
+
+            if (acceptedApps.length === 0) {
+                listEl.innerHTML = `<div class="p-4 text-xs text-slate-400 text-center">成立したマッチング対戦はありません。</div>`;
+                return;
+            }
+
+            listEl.innerHTML = acceptedApps.map(appItem => {
+                const match = rawMatches.find(m => m.id === appItem.matchId);
+                if (!match) return '';
+
+                const opponentName = currentUser?.uid === match.hostUserId ? appItem.applicantTeamName : match.hostTeamName;
+                const isActive = activeChatMatchId === match.id;
+
+                return `
+                    <div onclick="openChatRoom('${match.id}')" class="p-3.5 cursor-pointer hover:bg-slate-100 transition-all ${isActive ? 'bg-indigo-50 border-l-4 border-indigo-600' : ''}">
+                        <div class="font-extrabold text-slate-800 text-sm truncate">${escapeHtml(opponentName)}</div>
+                        <div class="text-xs text-slate-500 truncate mt-0.5">${escapeHtml(match.sport)} | ${formatDateTime(match.matchDateTime)}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.openChatRoom = function(matchId) {
+            activeChatMatchId = matchId;
+            renderChatRooms();
+
+            const match = rawMatches.find(m => m.id === matchId);
+            const appItem = rawApplications.find(a => a.matchId === matchId && a.status === 'accepted');
+
+            if (!match || !appItem) return;
+
+            const opponentName = currentUser?.uid === match.hostUserId ? appItem.applicantTeamName : match.hostTeamName;
+
+            const headerTitle = document.getElementById('chat-header-title');
+            const headerSub = document.getElementById('chat-header-sub');
+            if (headerTitle) headerTitle.innerText = opponentName;
+            if (headerSub) headerSub.innerText = `${match.sport} | ${formatDateTime(match.matchDateTime)} (${match.location})`;
+
+            document.getElementById('chat-no-selection')?.classList.add('hidden');
+            document.getElementById('chat-active-window')?.classList.remove('hidden');
+
+            renderChatMessages(matchId);
+        };
+
+        window.closeMobileChatWindow = function() {
+            document.getElementById('chat-active-window')?.classList.add('hidden');
+            document.getElementById('chat-no-selection')?.classList.remove('hidden');
+            activeChatMatchId = null;
+        };
+
+        function renderChatMessages(matchId) {
+            const container = document.getElementById('chat-messages-container');
+            if (!container) return;
+
+            const matchMsgs = rawMessages.filter(m => m.matchId === matchId);
+            matchMsgs.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+            if (matchMsgs.length === 0) {
+                container.innerHTML = `<p class="text-center text-xs text-slate-400 py-8">まだメッセージはありません。当日の連絡や調整を行いましょう。</p>`;
+                return;
+            }
+
+            container.innerHTML = matchMsgs.map(msg => {
+                const isMe = currentUser && msg.senderUserId === currentUser.uid;
+
+                return `
+                    <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'}">
+                        <span class="text-[10px] text-slate-400 mb-0.5 px-1">${escapeHtml(msg.senderTeamName)}</span>
+                        <div class="max-w-[80%] rounded-2xl px-4 py-2.5 text-xs font-medium shadow-sm ${
+                            isMe ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white border border-slate-200 text-slate-800 rounded-tl-none'
+                        }">
+                            ${escapeHtml(msg.text)}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.scrollTop = container.scrollHeight;
+        }
+
+        window.sendChatMessage = async function(e) {
+            e.preventDefault();
+            if (!activeChatMatchId) return;
+
+            const input = document.getElementById('chat-message-input');
+            const text = input.value.trim();
+
+            if (!text) return;
+
+            const newMsg = {
+                id: 'msg_' + Date.now(),
+                matchId: activeChatMatchId,
+                senderUserId: currentUser ? currentUser.uid : 'anon',
+                senderTeamName: myTeamProfile.teamName || '匿名チーム',
+                text: text,
+                createdAt: new Date().toISOString()
+            };
+
+            input.value = '';
+
+            if (isCloudConnected && db) {
+                try {
+                    const msgCol = collection(db, 'artifacts', appId, 'public', 'data', 'messages');
+                    await addDoc(msgCol, newMsg);
+                } catch (err) {
+                    console.warn("Cloud send message warning:", err);
+                }
+            } else {
+                rawMessages.push(newMsg);
+                renderChatMessages(activeChatMatchId);
+            }
+        };
+
+        // Utility: Escape HTML
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Utility: Format Date
+        function formatDateTime(dateTimeStr) {
+            if (!dateTimeStr) return '日時未定';
+            try {
+                const d = new Date(dateTimeStr);
+                if (isNaN(d.getTime())) return dateTimeStr;
+                const m = d.getMonth() + 1;
+                const date = d.getDate();
+                const hours = String(d.getHours()).padStart(2, '0');
+                const mins = String(d.getMinutes()).padStart(2, '0');
+                const days = ['日', '月', '火', '水', '木', '金', '土'];
+                return `${m}月${date}日(${days[d.getDay()]}) ${hours}:${mins}`;
+            } catch (e) {
+                return dateTimeStr;
+            }
+        }
+
+        // Run application setup on page load
+        window.addEventListener('DOMContentLoaded', startApp);
+    </script>
+</body>
+</html>
